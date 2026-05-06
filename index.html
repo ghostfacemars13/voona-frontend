@@ -23,7 +23,10 @@ async function search(v){
   if(v.length<3){r.innerHTML='';return;}
   r.innerHTML='<div class="p-8 text-center text-slate-500">Recherche...</div>';
   try{
-    const resp=await fetch('https://search.openfoodfacts.org/search?q='+encodeURIComponent(v)+'&page_size=20');
+    // Proxy CORS via api.allorigins.win (gratuit, pas d'inscription)
+    const realUrl='https://search.openfoodfacts.org/search?q='+encodeURIComponent(v)+'&page_size=20';
+    const proxyUrl='https://api.allorigins.win/raw?url='+encodeURIComponent(realUrl);
+    const resp=await fetch(proxyUrl);
     const d=await resp.json();
     const items=(d.hits||[]).map(p=>{
       const n=typeof p.product_name==='string'?p.product_name:(p.product_name&&(p.product_name.fr||p.product_name.en||p.product_name.main))||'';

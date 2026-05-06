@@ -16,30 +16,26 @@
 </header>
 <main class="max-w-2xl mx-auto p-4" id="r"></main>
 <script>
+const API = "https://voona-backend.onrender.com";
 const q=document.getElementById('q'),r=document.getElementById('r');let t;
 const esc=s=>String(s||'').replace(/[<>&'"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;',"'":'&#39;','"':'&quot;'}[c]));
-function imgUrl(c){if(!c||c.length<10)return '';return 'https://images.openfoodfacts.org/images/products/'+c.replace(/(.{3})(.{3})(.{3})(.+)/, '$1/$2/$3/$4')+'/front_fr.200.jpg';}
 async function search(v){
   if(v.length<3){r.innerHTML='';return;}
   r.innerHTML='<div class="p-8 text-center text-slate-500">Recherche...</div>';
   try{
-    // Proxy CORS via api.allorigins.win (gratuit, pas d'inscription)
-    const realUrl='https://search.openfoodfacts.org/search?q='+encodeURIComponent(v)+'&page_size=20';
-    const proxyUrl='https://api.allorigins.win/raw?url='+encodeURIComponent(realUrl);
-    const resp=await fetch(proxyUrl);
-    const d=await resp.json();
-    const items=(d.hits||[]).map(p=>{
-      const n=typeof p.product_name==='string'?p.product_name:(p.product_name&&(p.product_name.fr||p.product_name.en||p.product_name.main))||'';
-      const b=Array.isArray(p.brands)?p.brands[0]:p.brands;
-      return n&&p.code?{name:n,brand:b||'',code:p.code,img:imgUrl(p.code)}:null;
-    }).filter(Boolean).slice(0,15);
-    r.innerHTML=items.length?items.map(p=>'<div class="bg-white rounded-xl p-3 mb-2 flex gap-3 cursor-pointer hover:shadow-md transition" onclick="loadPrices(\''+p.code+'\',\''+esc(p.name).replace(/\\/g,'\\\\').replace(/\'/g,"\\\'")+'\')">'+(p.img?'<img src="'+p.img+'" class="w-14 h-14 rounded-lg object-cover bg-slate-100" onerror="this.style.display=\'none\'"/>':'<div class="w-14 h-14 rounded-lg bg-slate-100"></div>')+'<div class="flex-1 min-w-0"><div class="font-semibold truncate">'+esc(p.name)+'</div><div class="text-xs text-slate-500 truncate">'+esc(p.brand)+' · '+p.code+'</div></div></div>').join(''):'<div class="p-8 text-center text-slate-500">Aucun produit trouvé</div>';
-  }catch(e){r.innerHTML='<div class="bg-rose-50 p-4 rounded-xl text-rose-700">Erreur: '+esc(e.message)+'</div>';}
+    const resp=await fetch(API+'/api/products/search?q='+encodeURIComponent(v));
+    const items=await resp.json();
+    if(!Array.isArray(items)||!items.length){
+      r.innerHTML='<div class="p-8 text-center text-slate-500">Aucun produit trouvé pour "'+esc(v)+'"</div>';
+      return;
+    }
+    r.innerHTML=items.slice(0,15).map(p=>'<div class="bg-white rounded-xl p-3 mb-2 flex gap-3 cursor-pointer hover:shadow-md transition" onclick="loadPrices(\''+p.barcode+'\',\''+esc(p.name).replace(/\\/g,'\\\\').replace(/\'/g,"\\\'")+'\')">'+(p.imageUrl?'<img src="'+p.imageUrl+'" class="w-14 h-14 rounded-lg object-cover bg-slate-100" onerror="this.style.display=\'none\'"/>':'<div class="w-14 h-14 rounded-lg bg-slate-100"></div>')+'<div class="flex-1 min-w-0"><div class="font-semibold truncate">'+esc(p.name)+'</div><div class="text-xs text-slate-500 truncate">'+esc(p.brand||'')+' · '+p.barcode+'</div></div></div>').join('');
+  }catch(e){r.innerHTML='<div class="bg-rose-50 p-4 rounded-xl text-rose-700">Erreur: '+esc(e.message)+'<br/><span class="text-xs">Le backend Render dort peut-être (free tier). Réessayez dans 30 sec.</span></div>';}
 }
 async function loadPrices(code,name){
   r.innerHTML='<button onclick="location.reload()" class="text-emerald-600 mb-3">&larr; Retour</button><div class="bg-white p-4 rounded-xl"><h2 class="text-xl font-bold mb-2">'+esc(name)+'</h2><div class="text-slate-500">Chargement des prix...</div></div>';
   try{
-    const resp=await fetch('https://voona-backend.onrender.com/api/prices/'+code);
+    const resp=await fetch(API+'/api/prices/'+code);
     const d=await resp.json();
     const prices=d.prices||[];
     const cheapest=prices[0];
